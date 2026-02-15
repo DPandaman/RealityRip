@@ -19,7 +19,7 @@ public class AIService : MonoBehaviour
         if (string.IsNullOrEmpty(apiKey)) {
             Debug.LogError("<color=red>CRITICAL:</color> OpenAI Key missing. Check environment variables.");
         } else {
-            Debug.Log($"<color=green>SUCCESS:</color> OpenAI Key loaded.");
+             Debug.Log($"<color=green>SUCCESS:</color> OpenAI Key loaded.");
         }
     }
 

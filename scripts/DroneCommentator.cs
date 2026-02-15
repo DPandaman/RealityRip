@@ -172,4 +172,27 @@ public class DroneCommentator : MonoBehaviour
         }
         Debug.Log("----------------------");
     }
+
+    public void Announce(string eventType, string context){
+        if (isTalking) return; // don't interrupt yourself
+        isTalking = true;
+
+        if(uiText != null) uiText.text = "Analysis...";
+
+        string systemPrompt = personaPrompt + " Context: We are in a search-and-rescue simulation.";
+        string userPrompt = $"Event: {eventType}. Details: {context}. React to this update.";
+
+        if(aiService != null) {
+            aiService.SendPrompt(systemPrompt, userPrompt, (response) => 
+            {
+                if(uiText != null) uiText.text = response;
+                LogCommentary(eventType, response);
+                if (voiceService != null) voiceService.Speak(response);
+                Invoke("ResetTalking", 4f);
+            });
+        }
+    }
+
 }
+
+
