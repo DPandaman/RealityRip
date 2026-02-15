@@ -8,11 +8,11 @@ using System.Collections;
 public class VoiceService : MonoBehaviour
 {
     [Header("local tts settings")]
-    public string ttsUrl = "http://localhost:5000/api/tts";
+    public string ttsUrl = "http://10.32.83.219:5000";
     public int requestTimeout = 15;
 
     [Header("connections")]
-    public AudioSource voiceSource; // drag drone audio source here
+    public AudioSource voiceSource; 
 
     public void Speak(string text){
         if (string.IsNullOrEmpty(text)) return;

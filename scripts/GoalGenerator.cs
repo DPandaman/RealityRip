@@ -1,6 +1,9 @@
-// AI-driven waypoint generation via GPT-4o spatial reasoning
+// AI-driven waypoint generation via GPT-5.2 spatial reasoning
 
 using UnityEngine;
+using UnityEngine.Networking;
+using System.Text;
+using System.Collections;
 using System.Collections.Generic;
 
 public class RescueGoalGenerator : MonoBehaviour
@@ -10,10 +13,16 @@ public class RescueGoalGenerator : MonoBehaviour
     public LayerMask splatLayer;  // gaussian splat mesh collider layer
 
     [Header("AI Integration")]
-    public AIService aiService;          // gpt-4o for waypoint generation
+    public AIService aiService;          // fallback local LLM
     public GoalManager goalManager;      // register spawned goals
     public float raycastMaxDistance = 50f;
     public float goalHoverOffset = 0.3f;
+
+    [Header("GPT-5.2 (Trajectory)")]
+    public string openaiApiUrl = "https://api.openai.com/v1/chat/completions";
+    public string openaiModel = "gpt-5.2";
+    public int requestTimeout = 30;
+    private string openaiApiKey;
 
     // maintaining a list of active waypoints to manage scene clutter
     public List<Transform> activeGoals = new List<Transform>();
@@ -27,18 +36,17 @@ public class RescueGoalGenerator : MonoBehaviour
         public int priority;
     }
 
+    void Awake()
+    {
+        openaiApiKey = System.Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        if (string.IsNullOrEmpty(openaiApiKey))
+            Debug.LogWarning("RescueGoalGen: OPENAI_API_KEY not set, trajectory generation will use local fallback");
+    }
+
     public void GenerateGoalsFromAI(string vlmDescription, string userPrompt,
                                     Transform droneTransform, System.Action<bool> onComplete)
     {
         ClearGoals();
-
-        if (aiService == null)
-        {
-            Debug.LogWarning("RescueGoalGen: no AIService assigned, using fallback");
-            SpawnFallbackPattern(droneTransform);
-            onComplete?.Invoke(activeGoals.Count > 0);
-            return;
-        }
 
         string systemPrompt = "You are a spatial reasoning engine for a drone simulator. " +
             "You receive a scene description from a vision model and a user's mission objective. " +
@@ -48,46 +56,127 @@ public class RescueGoalGenerator : MonoBehaviour
 
         string userMsg = $"Scene: {vlmDescription}\nMission: {userPrompt}\nOutput JSON array of waypoints:";
 
-        aiService.SendPrompt(systemPrompt, userMsg, (response) =>
+        // use GPT-5.2 via OpenAI API if key is available, otherwise fall back to local Ollama
+        if (!string.IsNullOrEmpty(openaiApiKey))
         {
-            if (string.IsNullOrEmpty(response))
+            StartCoroutine(PostOpenAIRequest(systemPrompt, userMsg, droneTransform, onComplete));
+        }
+        else if (aiService != null)
+        {
+            aiService.SendPrompt(systemPrompt, userMsg, (response) =>
             {
-                Debug.LogWarning("RescueGoalGen: empty AI response, using fallback");
-                SpawnFallbackPattern(droneTransform);
-                onComplete?.Invoke(activeGoals.Count > 0);
-                return;
-            }
-
-            Debug.Log($"RescueGoalGen: AI response: {response}");
-
-            List<WaypointData> waypoints = ParseWaypointJSON(response);
-
-            if (waypoints.Count == 0)
-            {
-                Debug.LogWarning("RescueGoalGen: failed to parse waypoints, using fallback");
-                SpawnFallbackPattern(droneTransform);
-                onComplete?.Invoke(activeGoals.Count > 0);
-                return;
-            }
-
-            // sort by priority
-            waypoints.Sort((a, b) => a.priority.CompareTo(b.priority));
-
-            foreach (var wp in waypoints)
-            {
-                // compute world position from drone-relative offsets
-                Vector3 worldPos = droneTransform.position
-                    + droneTransform.forward * wp.forward
-                    + droneTransform.right * wp.right
-                    + Vector3.up * wp.up;
-
-                Vector3 snapped = ValidateAndSnap(worldPos, droneTransform);
-                SpawnGoal(snapped, wp.name);
-            }
-
-            Debug.Log($"RescueGoalGen: spawned {activeGoals.Count} AI-generated waypoints");
+                ProcessWaypointResponse(response, droneTransform, onComplete);
+            });
+        }
+        else
+        {
+            Debug.LogWarning("RescueGoalGen: no AI available, using fallback");
+            SpawnFallbackPattern(droneTransform);
             onComplete?.Invoke(activeGoals.Count > 0);
-        });
+        }
+    }
+
+    IEnumerator PostOpenAIRequest(string systemPrompt, string userMsg,
+                                  Transform droneTransform, System.Action<bool> onComplete)
+    {
+        string safeSystem = systemPrompt.Replace("\"", "\\\"").Replace("\n", " ");
+        string safeUser = userMsg.Replace("\"", "\\\"").Replace("\n", " ");
+
+        string json = $@"{{
+            ""model"": ""{openaiModel}"",
+            ""messages"": [
+                {{ ""role"": ""system"", ""content"": ""{safeSystem}"" }},
+                {{ ""role"": ""user"", ""content"": ""{safeUser}"" }}
+            ]
+        }}";
+
+        var request = new UnityWebRequest(openaiApiUrl, "POST");
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+        request.SetRequestHeader("Authorization", "Bearer " + openaiApiKey);
+        request.timeout = requestTimeout;
+
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            string content = ParseResponseContent(request.downloadHandler.text);
+            ProcessWaypointResponse(content, droneTransform, onComplete);
+        }
+        else
+        {
+            Debug.LogError($"RescueGoalGen: GPT-5.2 request failed: {request.error}");
+            SpawnFallbackPattern(droneTransform);
+            onComplete?.Invoke(activeGoals.Count > 0);
+        }
+    }
+
+    string ParseResponseContent(string json)
+    {
+        string key = "\"content\":";
+        int keyIndex = json.LastIndexOf(key);
+        if (keyIndex == -1) return null;
+
+        int start = keyIndex + key.Length;
+        while (start < json.Length && (json[start] == ' ' || json[start] == '\n' || json[start] == '\r'))
+            start++;
+
+        if (start >= json.Length || json[start] != '"') return null;
+        start++;
+
+        int end = start;
+        while (end < json.Length){
+            if (json[end] == '"' && json[end - 1] != '\\') break;
+            end++;
+        }
+
+        if (end >= json.Length) return null;
+
+        string content = json.Substring(start, end - start);
+        content = content.Replace("\\n", "\n").Replace("\\\"", "\"");
+        return content;
+    }
+
+    void ProcessWaypointResponse(string response, Transform droneTransform, System.Action<bool> onComplete)
+    {
+        if (string.IsNullOrEmpty(response))
+        {
+            Debug.LogWarning("RescueGoalGen: empty AI response, using fallback");
+            SpawnFallbackPattern(droneTransform);
+            onComplete?.Invoke(activeGoals.Count > 0);
+            return;
+        }
+
+        Debug.Log($"RescueGoalGen: AI response: {response}");
+
+        List<WaypointData> waypoints = ParseWaypointJSON(response);
+
+        if (waypoints.Count == 0)
+        {
+            Debug.LogWarning("RescueGoalGen: failed to parse waypoints, using fallback");
+            SpawnFallbackPattern(droneTransform);
+            onComplete?.Invoke(activeGoals.Count > 0);
+            return;
+        }
+
+        // sort by priority
+        waypoints.Sort((a, b) => a.priority.CompareTo(b.priority));
+
+        foreach (var wp in waypoints)
+        {
+            Vector3 worldPos = droneTransform.position
+                + droneTransform.forward * wp.forward
+                + droneTransform.right * wp.right
+                + Vector3.up * wp.up;
+
+            Vector3 snapped = ValidateAndSnap(worldPos, droneTransform);
+            SpawnGoal(snapped, wp.name);
+        }
+
+        Debug.Log($"RescueGoalGen: spawned {activeGoals.Count} AI-generated waypoints");
+        onComplete?.Invoke(activeGoals.Count > 0);
     }
 
     // legacy signature for backward compatibility
