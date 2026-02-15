@@ -56,4 +56,14 @@ public class AIService : MonoBehaviour
             Debug.LogError("ai error: " + request.error);
         }
     }
+
+
+    void Start() {
+        string checkKey = System.Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        if (string.IsNullOrEmpty(checkKey)) {
+            Debug.LogError("<color=red>CRITICAL:</color> OpenAI Key not found! Restart Unity or check .zshrc");
+        } else {
+            Debug.Log("<color=green>SUCCESS:</color> OpenAI Key loaded. Ready for rizz.");
+        }
+    }
 }
