@@ -1,10 +1,10 @@
 # RealityRip | TreeHacks 2026
 
 **Team Members:**
-* [Devanshu Pandya] (UIUC)
-* [Julia Jiang] (Stanford)
-* [Koichi Kimoto] (Stanford)
-* [Rohan Godha] (Georgia Tech)
+* Devanshu Pandya (UIUC)
+* Julia Jiang (Stanford)
+* Koichi Kimoto (Stanford)
+* Rohan Godha (Georgia Tech)
 
 ## 🎯 Objective
 An AI-native drone flight simulator that combines high-fidelity **Gaussian Splatting** environments with a real-time **Generative AI Flight Commentator**. We bridge the gap between realistic drone physics and interactive, personality-driven feedback to create a more engaging pilot training experience.
