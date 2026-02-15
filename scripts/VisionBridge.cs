@@ -10,7 +10,7 @@ public class VisionBridge : MonoBehaviour
 {
     [Header("VLM Config")]
     // local inference endpoint (ollama openai-compatible api)
-    public string localApiUrl = "http://localhost:11434/v1/chat/completions";
+    public string localApiUrl = "http://10.32.83.219:11434/v1/chat/completions";
     public string modelName = "llava";
     public Camera droneCamera;
 

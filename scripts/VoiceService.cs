@@ -1,4 +1,4 @@
-// speaks the commentary out loud 
+// speaks the commentary out loud via local piper TTS
 
 using UnityEngine;
 using UnityEngine.Networking;
@@ -7,44 +7,44 @@ using System.Collections;
 
 public class VoiceService : MonoBehaviour
 {
-    [Header("api settings")]
-    public string apiKey = System.Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-    public string ttsUrl = "https://api.openai.com/v1/audio/speech";
+    [Header("local tts settings")]
+    public string ttsUrl = "http://localhost:5000/api/tts";
+    public int requestTimeout = 15;
 
     [Header("connections")]
     public AudioSource voiceSource; // drag drone audio source here
 
     public void Speak(string text){
-        // trigger speech request
+        if (string.IsNullOrEmpty(text)) return;
         StartCoroutine(PostTTS(text));
     }
 
     IEnumerator PostTTS(string text){
-        // build tts json
-        string json = $@"{{a
-            ""model"": ""tts-1"",
-            ""input"": ""{text}"",
-            ""voice"": ""shimmer"" 
+        // sanitize for json
+        string safeText = text.Replace("\"", "\\\"").Replace("\n", " ");
+
+        string json = $@"{{
+            ""text"": ""{safeText}""
         }}";
 
         var request = new UnityWebRequest(ttsUrl, "POST");
         byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
         request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-        request.downloadHandler = new DownloadHandlerAudioClip(ttsUrl, AudioType.MPEG);
-        
+        request.downloadHandler = new DownloadHandlerAudioClip(ttsUrl, AudioType.WAV);
         request.SetRequestHeader("Content-Type", "application/json");
-        request.SetRequestHeader("Authorization", "Bearer " + apiKey);
+        request.timeout = requestTimeout;
 
         yield return request.SendWebRequest();
 
         if (request.result == UnityWebRequest.Result.Success){
-            // play result
             AudioClip clip = DownloadHandlerAudioClip.GetContent(request);
-            voiceSource.clip = clip;
-            voiceSource.Play();
+            if (clip != null && voiceSource != null){
+                voiceSource.clip = clip;
+                voiceSource.Play();
+            }
         }
         else{
-            Debug.LogError("tts error: " + request.error);
+            Debug.LogWarning($"TTS unavailable: {request.error} (is piper running on {ttsUrl}?)");
         }
     }
 }
