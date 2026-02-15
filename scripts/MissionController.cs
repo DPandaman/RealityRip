@@ -11,7 +11,7 @@ public class MissionController : MonoBehaviour
     [Header("Subsystem Dependencies")]
     public VisionBridge vision;        // visual perception
     public RescueGoalGenerator generator; // state estimation
-    public PathArchitect architect;    // trajectory planning
+    public PathGenerator architect;    // trajectory planning
     public DroneCommentator commentator; // human-machine interface (HMI)
 
     [Header("Mission Config")]

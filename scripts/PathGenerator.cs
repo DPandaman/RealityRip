@@ -5,7 +5,7 @@ using UnityEngine.Splines; // dependency: unity splines package
 using System.Linq;
 using System.Collections.Generic;
 
-public class PathArchitect : MonoBehaviour
+public class PathGenerator : MonoBehaviour
 {
     // container for the catmull-rom/bezier spline interpolation
     public SplineContainer splineContainer; 
@@ -14,14 +14,14 @@ public class PathArchitect : MonoBehaviour
     {
         // sanity check for null references
         if (splineContainer == null) {
-            Debug.LogError("PathArchitect: spline container missing. aborting trajectory generation.");
+            Debug.LogError("PathGenerator: spline container missing. aborting trajectory generation.");
             return;
         }
 
         Spline spline = splineContainer.Spline;
         spline.Clear(); // flushing previous trajectory
 
-        // Debug.Log($"PathArchitect: interpolating path for {waypoints.Count} nodes.");
+        // Debug.Log($"PathGenerator: interpolating path for {waypoints.Count} nodes.");
 
         // NOTE: could add x0 (current drone pos) as the first knot for continuity
         // spline.Add(new BezierKnot(Vector3.zero)); 
@@ -47,6 +47,6 @@ public class PathArchitect : MonoBehaviour
             splineContainer.GetComponent<SplineInstantiate>().UpdateInstances(); 
         }
         
-        Debug.Log("PathArchitect: trajectory computed.");
+        Debug.Log("PathGenerator: trajectory computed.");
     }
 }
