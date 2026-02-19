@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33b71fae31e6c7d438e8566dc713e666, type: 3}
+  m_Name: poster
+  m_EditorClassIdentifier: GaussianSplatting::GaussianSplatting.Runtime.GaussianSplatAsset
+  m_FormatVersion: 20231020
+  m_SplatCount: 196135
+  m_BoundsMin: {x: -21.16091, y: -9.544251, z: -15.3620405}
+  m_BoundsMax: {x: 9.474727, y: 13.319559, z: 9.640019}
+  m_DataHash:
+    serializedVersion: 2
+    Hash: 78373879ca76a80111739c0e114ed55e
+  m_PosFormat: 0
+  m_ScaleFormat: 0
+  m_SHFormat: 0
+  m_ColorFormat: 0
+  m_PosData: {fileID: 4900000, guid: 8b13197036a984eafbd652b59bba69d4, type: 3}
+  m_ColorData: {fileID: 4900000, guid: 01466aac5d0cb4ad2bd82313342eb204, type: 3}
+  m_OtherData: {fileID: 4900000, guid: 7fdd75dcd096b4a5a801799fe97edae9, type: 3}
+  m_SHData: {fileID: 4900000, guid: 19e81e6361d974a828537c6d49cfcc0a, type: 3}
+  m_ChunkData: {fileID: 0}
+  m_Cameras: []

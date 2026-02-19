@@ -1,0 +1,6 @@
+[submodule "SplaTAM"]
+	path = SplaTAM
+	url = https://github.com/rgodha24/SplaTAM
+[submodule "NeRFCapture"]
+	path = NeRFCapture
+	url = https://github.com/rgodha24/NeRFCapture
